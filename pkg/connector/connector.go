@@ -3,12 +3,13 @@ package connector
 import (
 	"context"
 	"crypto/tls"
-	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/conductorone/baton-splunk/pkg/splunk"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 )
 
 var (
@@ -61,23 +62,30 @@ func (sp *Splunk) Validate(ctx context.Context) (annotations.Annotations, error)
 }
 
 // New returns the Splunk connector.
-func New(ctx context.Context, password string) (*Splunk, error) {
-	// TODO: remove TLS skip
-	httpClient := http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+func New(ctx context.Context, password string, unsafe bool) (*Splunk, error) {
+	options := []uhttp.Option{
+		uhttp.WithLogger(true, ctxzap.Extract(ctx)),
 	}
 
-	// httpClient, err := uhttp.NewClient(
-	// 	ctx,
-	// 	uhttp.WithLogger(true, ctxzap.Extract(ctx)),
-	// )
-	// if err != nil {
-	// 	return nil, err
-	// }
+	// Skip TLS verification if flag `unsafe` is specified.
+	if unsafe { // #nosec G402
+		options = append(
+			options,
+			uhttp.WithTLSClientConfig(
+				&tls.Config{InsecureSkipVerify: true},
+			),
+		)
+	}
+
+	httpClient, err := uhttp.NewClient(
+		ctx,
+		options...,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Splunk{
-		client: splunk.NewClient(&httpClient, password),
+		client: splunk.NewClient(httpClient, password),
 	}, nil
 }

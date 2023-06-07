@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/conductorone/baton-sdk/pkg/cli"
-	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/conductorone/baton-splunk/pkg/connector"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -37,7 +37,7 @@ func main() {
 
 func getConnector(ctx context.Context, cfg *config) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-	splunkConnector, err := connector.New(ctx, cfg.AccessToken)
+	splunkConnector, err := connector.New(ctx, cfg.AccessToken, cfg.Unsafe)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
