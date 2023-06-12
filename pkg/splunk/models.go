@@ -22,14 +22,10 @@ type User struct {
 
 type Role struct {
 	BaseResource
-	Name   string `json:"name"`
-	Author string `json:"author"`
-}
-
-type Capability struct {
-	Name string `json:"name"`
-}
-
-type Vhost interface {
-	GetName() string
+	Name    string `json:"name"`
+	Author  string `json:"author"`
+	Content struct {
+		Capabilities         []string `json:"capabilities"`
+		ImportedCapabilities []string `json:"imported_capabilities"`
+	} `json:"content"`
 }
