@@ -69,11 +69,6 @@ func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
 	return rolesResponse.Values, nil
 }
 
-// TODO: implement this
-func (c *Client) GetCapabilities(ctx context.Context) ([]Capability, error) {
-	return nil, nil
-}
-
 func setupQueryParams(query *url.Values) {
 	// setup response format to JSON
 	query.Set("output_mode", "json")

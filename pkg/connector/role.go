@@ -19,6 +19,7 @@ const roleMember = "member"
 type roleResourceType struct {
 	resourceType *v2.ResourceType
 	client       *splunk.Client
+	verbose      bool
 }
 
 func (r *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
@@ -94,26 +95,28 @@ func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 
 	rv = append(rv, ent.NewAssignmentEntitlement(resource, roleMember, entitlementOptions...))
 
-	// add also role capabilities as entitlements
-	roleTrait, err := rs.GetRoleTrait(resource)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	roleCapabilitiesPayload, ok := rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
-	if !ok {
-		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role capabilities from role profile")
-	}
-
-	roleCapabilities := strings.Split(roleCapabilitiesPayload, ",")
-	for _, roleCapability := range roleCapabilities {
-		entitlementOptions := []ent.EntitlementOption{
-			ent.WithGrantableTo(resourceTypeRole),
-			ent.WithDisplayName(fmt.Sprintf("%s capability", roleCapability)),
-			ent.WithDescription(fmt.Sprintf("%s Splunk capability", roleCapability)),
+	if r.verbose {
+		// add also role capabilities as entitlements
+		roleTrait, err := rs.GetRoleTrait(resource)
+		if err != nil {
+			return nil, "", nil, err
 		}
 
-		rv = append(rv, ent.NewPermissionEntitlement(resource, roleCapability, entitlementOptions...))
+		roleCapabilitiesPayload, ok := rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
+		if !ok {
+			return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role capabilities from role profile")
+		}
+
+		roleCapabilities := strings.Split(roleCapabilitiesPayload, ",")
+		for _, roleCapability := range roleCapabilities {
+			entitlementOptions := []ent.EntitlementOption{
+				ent.WithGrantableTo(resourceTypeRole),
+				ent.WithDisplayName(fmt.Sprintf("%s capability", roleCapability)),
+				ent.WithDescription(fmt.Sprintf("%s Splunk capability", roleCapability)),
+			}
+
+			rv = append(rv, ent.NewPermissionEntitlement(resource, roleCapability, entitlementOptions...))
+		}
 	}
 
 	return rv, "", nil, nil
@@ -130,20 +133,17 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role name from role profile")
 	}
 
-	roleCapabilitiesPayload, ok := rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
-	if !ok {
-		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role capabilities from role profile")
-	}
-
-	roleCapabilities := strings.Split(roleCapabilitiesPayload, ",")
 	var rv []*v2.Grant
+	var roleCapabilities []string
+	var roleCapabilitiesPayload string
 
-	for _, roleCapability := range roleCapabilities {
-		rv = append(rv, grant.NewGrant(
-			resource,
-			roleCapability,
-			resource.Id,
-		))
+	if r.verbose {
+		roleCapabilitiesPayload, ok = rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
+		if !ok {
+			return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role capabilities from role profile")
+		}
+
+		roleCapabilities = strings.Split(roleCapabilitiesPayload, ",")
 	}
 
 	users, err := r.client.GetUsers(ctx)
@@ -166,6 +166,16 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 					roleMember,
 					ur.Id,
 				))
+
+				if r.verbose {
+					for _, roleCapability := range roleCapabilities {
+						rv = append(rv, grant.NewGrant(
+							resource,
+							roleCapability,
+							ur.Id,
+						))
+					}
+				}
 			}
 		}
 	}
@@ -173,9 +183,10 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 	return rv, "", nil, nil
 }
 
-func roleBuilder(client *splunk.Client) *roleResourceType {
+func roleBuilder(client *splunk.Client, verbose bool) *roleResourceType {
 	return &roleResourceType{
 		resourceType: resourceTypeRole,
 		client:       client,
+		verbose:      verbose,
 	}
 }

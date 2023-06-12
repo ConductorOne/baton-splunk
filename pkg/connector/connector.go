@@ -32,12 +32,14 @@ var (
 
 type Splunk struct {
 	client *splunk.Client
+
+	verbose bool
 }
 
 func (sp *Splunk) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
 		userBuilder(sp.client),
-		roleBuilder(sp.client),
+		roleBuilder(sp.client, sp.verbose),
 	}
 }
 
@@ -62,7 +64,7 @@ func (sp *Splunk) Validate(ctx context.Context) (annotations.Annotations, error)
 }
 
 // New returns the Splunk connector.
-func New(ctx context.Context, password string, unsafe bool) (*Splunk, error) {
+func New(ctx context.Context, password string, unsafe bool, verbose bool) (*Splunk, error) {
 	options := []uhttp.Option{
 		uhttp.WithLogger(true, ctxzap.Extract(ctx)),
 	}
@@ -86,6 +88,7 @@ func New(ctx context.Context, password string, unsafe bool) (*Splunk, error) {
 	}
 
 	return &Splunk{
-		client: splunk.NewClient(httpClient, password),
+		client:  splunk.NewClient(httpClient, password),
+		verbose: verbose,
 	}, nil
 }
