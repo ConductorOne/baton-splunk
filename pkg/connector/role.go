@@ -50,11 +50,11 @@ func roleResource(ctx context.Context, role *splunk.Role) (*v2.Resource, error) 
 		"role_capabilities": roleCapabilitiesString,
 	}
 
-	resource, err := rs.NewRoleResource(
+	resource, err := rs.NewGroupResource(
 		displayName,
 		resourceTypeRole,
 		roleID,
-		[]rs.RoleTraitOption{rs.WithRoleProfile(profile)},
+		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
 	)
 	if err != nil {
 		return nil, err
