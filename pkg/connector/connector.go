@@ -10,6 +10,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/conductorone/baton-splunk/pkg/splunk"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -51,14 +53,13 @@ func (sp *Splunk) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	}, nil
 }
 
-// TODO: implement this
 // Validate hits the Splunk API to validate that the configured credentials are valid and compatible.
 func (sp *Splunk) Validate(ctx context.Context) (annotations.Annotations, error) {
 	// should be able to list users
-	// _, err := sp.client.GetUsers(ctx)
-	// if err != nil {
-	// 	return nil, status.Error(codes.Unauthenticated, "Provided Access Token is invalid")
-	// }
+	_, _, err := sp.client.GetUsers(ctx, splunk.PaginationVars{Limit: 1})
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Provided Access Token is invalid")
+	}
 
 	return nil, nil
 }
