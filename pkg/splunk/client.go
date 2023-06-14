@@ -133,7 +133,6 @@ func setupPagination(query *url.Values, limit int, page string) {
 	}
 }
 
-// / search=roles=power
 func setupFiltering(query *url.Values, filter string) {
 	// add filter
 	if filter != "" {
