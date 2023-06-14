@@ -3,8 +3,10 @@ package splunk
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,12 +22,20 @@ type Client struct {
 	Token      string
 }
 
-type UsersResponse struct {
-	Values []User `json:"entry"`
+type PaginationData struct {
+	Total   int `json:"total"`
+	PerPage int `json:"perPage"`
+	Offset  int `json:"offset"`
 }
 
-type RolesResponse struct {
-	Values []Role `json:"entry"`
+type PaginationVars struct {
+	Limit int
+	Page  string
+}
+
+type Response[T any] struct {
+	Values         []T `json:"entry"`
+	PaginationData `json:"paging"`
 }
 
 func NewClient(httpClient *http.Client, token string) *Client {
@@ -36,37 +46,99 @@ func NewClient(httpClient *http.Client, token string) *Client {
 }
 
 // GetUsers returns all users under specific Splunk instance.
-func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
-	var usersResponse UsersResponse
+func (c *Client) GetUsers(ctx context.Context, getUsersVars PaginationVars) ([]User, string, error) {
+	var usersResponse Response[User]
 
 	err := c.doRequest(
 		ctx,
 		UsersBaseURL,
 		&usersResponse,
+		&getUsersVars,
+		"",
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return usersResponse.Values, nil
+	return handlePagination(&usersResponse)
+}
+
+// GetUsersByRole returns all users in some specific role under one Splunk instance.
+func (c *Client) GetUsersByRole(ctx context.Context, getUsersVars PaginationVars, role string) ([]User, string, error) {
+	var usersResponse Response[User]
+	var roleFilter string
+
+	if role != "" {
+		roleFilter = fmt.Sprintf("roles=\"%s\"", role)
+	}
+
+	err := c.doRequest(
+		ctx,
+		UsersBaseURL,
+		&usersResponse,
+		&getUsersVars,
+		roleFilter,
+	)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return handlePagination(&usersResponse)
 }
 
 // GetRoles returns all roles under specific Splunk instance.
-func (c *Client) GetRoles(ctx context.Context) ([]Role, error) {
-	var rolesResponse RolesResponse
+func (c *Client) GetRoles(ctx context.Context, getRolesVars PaginationVars) ([]Role, string, error) {
+	var rolesResponse Response[Role]
 
 	err := c.doRequest(
 		ctx,
 		RolesBaseURL,
 		&rolesResponse,
+		&getRolesVars,
+		"",
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return rolesResponse.Values, nil
+	return handlePagination(&rolesResponse)
+}
+
+// Handles pagination for Splunk API
+// `offset` is 0-indexed representation of the current page,
+// `perPage` is the number of items per page and
+// `total` is the total number of items in the response.
+func handlePagination[T any](response *Response[T]) ([]T, string, error) {
+	total, perPage, offset := response.Total, response.PerPage, response.Offset+1
+
+	if (offset * perPage) < total {
+		return response.Values, strconv.Itoa(offset), nil
+	}
+
+	return response.Values, "", nil
+}
+
+func setupPagination(query *url.Values, limit int, page string) {
+	// add limit
+	if limit != 0 {
+		query.Set("count", strconv.Itoa(limit))
+	}
+
+	// add page
+	if page != "" {
+		query.Set("offset", page)
+	}
+}
+
+// / search=roles=power
+func setupFiltering(query *url.Values, filter string) {
+	// add filter
+	if filter != "" {
+		query.Set("search", filter)
+	}
 }
 
 func setupQueryParams(query *url.Values) {
@@ -78,6 +150,8 @@ func (c *Client) doRequest(
 	ctx context.Context,
 	urlAddress string,
 	resourceResponse interface{},
+	paginationVars *PaginationVars,
+	filter string,
 ) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlAddress, nil)
 	if err != nil {
@@ -87,7 +161,12 @@ func (c *Client) doRequest(
 	// setup query params
 	queryParams := url.Values{}
 	setupQueryParams(&queryParams)
-	req.URL.RawQuery = queryParams.Encode()
+	setupPagination(&queryParams, paginationVars.Limit, paginationVars.Page)
+	setupFiltering(&queryParams, filter)
+
+	if queryParams != nil {
+		req.URL.RawQuery = queryParams.Encode()
+	}
 
 	// setup headers
 	req.Header.Set("content-type", "application/json")

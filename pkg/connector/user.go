@@ -45,9 +45,25 @@ func userResource(ctx context.Context, user *splunk.User) (*v2.Resource, error) 
 }
 
 func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	users, err := u.client.GetUsers(ctx)
+	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeUser.Id})
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	users, nextPage, err := u.client.GetUsers(
+		ctx,
+		splunk.PaginationVars{
+			Limit: ResourcesPageSize,
+			Page:  bag.PageToken(),
+		},
+	)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("splunk-connector: failed to list users: %w", err)
+	}
+
+	pageToken, err := bag.NextToken(nextPage)
+	if err != nil {
+		return nil, "", nil, err
 	}
 
 	rv := make([]*v2.Resource, 0, len(users))
@@ -62,7 +78,7 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, ur)
 	}
 
-	return rv, "", nil, nil
+	return rv, pageToken, nil, nil
 }
 
 func (u *userResourceType) Entitlements(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {

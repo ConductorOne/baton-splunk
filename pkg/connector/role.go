@@ -64,9 +64,25 @@ func roleResource(ctx context.Context, role *splunk.Role) (*v2.Resource, error) 
 }
 
 func (r *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	roles, err := r.client.GetRoles(ctx)
+	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeRole.Id})
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	roles, nextPage, err := r.client.GetRoles(
+		ctx,
+		splunk.PaginationVars{
+			Limit: ResourcesPageSize,
+			Page:  bag.PageToken(),
+		},
+	)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("splunk-connector: failed to list roles: %w", err)
+	}
+
+	pageToken, err := bag.NextToken(nextPage)
+	if err != nil {
+		return nil, "", nil, err
 	}
 
 	rv := make([]*v2.Resource, 0, len(roles))
@@ -81,7 +97,7 @@ func (r *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, rr)
 	}
 
-	return rv, "", nil, nil
+	return rv, pageToken, nil, nil
 }
 
 func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
@@ -122,7 +138,12 @@ func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 	return rv, "", nil, nil
 }
 
-func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeUser.Id})
+	if err != nil {
+		return nil, "", nil, err
+	}
+
 	roleTrait, err := rs.GetRoleTrait(resource)
 	if err != nil {
 		return nil, "", nil, err
@@ -137,6 +158,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 	var roleCapabilities []string
 	var roleCapabilitiesPayload string
 
+	// Prepare also role capabilities if verbose mode is enabled.
 	if r.verbose {
 		roleCapabilitiesPayload, ok = rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
 		if !ok {
@@ -146,9 +168,21 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 		roleCapabilities = strings.Split(roleCapabilitiesPayload, ",")
 	}
 
-	users, err := r.client.GetUsers(ctx)
+	users, nextPage, err := r.client.GetUsersByRole(
+		ctx,
+		splunk.PaginationVars{
+			Limit: ResourcesPageSize,
+			Page:  bag.PageToken(),
+		},
+		roleName,
+	)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("splunk-connector: failed to get users: %w", err)
+	}
+
+	pageToken, err := bag.NextToken(nextPage)
+	if err != nil {
+		return nil, "", nil, err
 	}
 
 	for _, user := range users {
@@ -167,6 +201,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 					ur.Id,
 				))
 
+				// Grant also role capabilities if verbose mode is enabled.
 				if r.verbose {
 					for _, roleCapability := range roleCapabilities {
 						rv = append(rv, grant.NewGrant(
@@ -180,7 +215,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, _ 
 		}
 	}
 
-	return rv, "", nil, nil
+	return rv, pageToken, nil, nil
 }
 
 func roleBuilder(client *splunk.Client, verbose bool) *roleResourceType {
