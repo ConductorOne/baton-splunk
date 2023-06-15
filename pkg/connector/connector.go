@@ -30,6 +30,13 @@ var (
 			v2.ResourceType_TRAIT_GROUP,
 		},
 	}
+	resourceTypeApplication = &v2.ResourceType{
+		Id:          "application",
+		DisplayName: "Application",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_GROUP,
+		},
+	}
 )
 
 type Splunk struct {
@@ -42,6 +49,7 @@ func (sp *Splunk) ResourceSyncers(ctx context.Context) []connectorbuilder.Resour
 	return []connectorbuilder.ResourceSyncer{
 		userBuilder(sp.client),
 		roleBuilder(sp.client, sp.verbose),
+		applicationBuilder(sp.client),
 	}
 }
 

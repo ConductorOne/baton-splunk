@@ -34,3 +34,17 @@ func parsePageToken(i string, resourceID *v2.ResourceId) (*pagination.Bag, error
 
 	return b, nil
 }
+
+func containsRole(roles []string, role string) bool {
+	for _, r := range roles {
+		if r == "*" {
+			return true
+		}
+
+		if r == role {
+			return true
+		}
+	}
+
+	return false
+}

@@ -16,6 +16,7 @@ const BaseURL = "https://ms-work-g.local:8089/"
 const UsersBaseURL = BaseURL + "/services/authentication/users"
 const RolesBaseURL = BaseURL + "/services/authorization/roles"
 const CapabilitiesBaseURL = BaseURL + "/services/authorization/capabilities"
+const ApplicationsBaseURL = BaseURL + "/services/apps/local"
 
 type Client struct {
 	httpClient *http.Client
@@ -105,6 +106,25 @@ func (c *Client) GetRoles(ctx context.Context, getRolesVars PaginationVars) ([]R
 	}
 
 	return handlePagination(&rolesResponse)
+}
+
+// GetApplications returns all applications under specific Splunk instance.
+func (c *Client) GetApplications(ctx context.Context, getApplicationsVars PaginationVars) ([]Application, string, error) {
+	var applicationsResponse Response[Application]
+
+	err := c.doRequest(
+		ctx,
+		ApplicationsBaseURL,
+		&applicationsResponse,
+		&getApplicationsVars,
+		"",
+	)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return handlePagination(&applicationsResponse)
 }
 
 // Handles pagination for Splunk API

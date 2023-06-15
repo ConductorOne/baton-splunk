@@ -29,3 +29,21 @@ type Role struct {
 		ImportedCapabilities []string `json:"imported_capabilities"`
 	} `json:"content"`
 }
+
+type Application struct {
+	BaseResource
+	ACL     ACL    `json:"acl"`
+	Name    string `json:"name"`
+	Author  string `json:"author"`
+	Content struct {
+		Description string `json:"description"`
+	} `json:"content"`
+}
+
+type ACL struct {
+	App   string `json:"app"`
+	Perms struct {
+		Read  []string `json:"read"`
+		Write []string `json:"write"`
+	} `json:"perms"`
+}

@@ -144,7 +144,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 		return nil, "", nil, err
 	}
 
-	roleTrait, err := rs.GetRoleTrait(resource)
+	roleTrait, err := rs.GetGroupTrait(resource)
 	if err != nil {
 		return nil, "", nil, err
 	}
