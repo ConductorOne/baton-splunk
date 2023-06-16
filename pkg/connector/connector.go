@@ -33,9 +33,6 @@ var (
 	resourceTypeApplication = &v2.ResourceType{
 		Id:          "application",
 		DisplayName: "Application",
-		Traits: []v2.ResourceType_Trait{
-			v2.ResourceType_TRAIT_GROUP,
-		},
 	}
 )
 

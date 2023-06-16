@@ -17,6 +17,7 @@ const UsersBaseURL = BaseURL + "/services/authentication/users"
 const RolesBaseURL = BaseURL + "/services/authorization/roles"
 const CapabilitiesBaseURL = BaseURL + "/services/authorization/capabilities"
 const ApplicationsBaseURL = BaseURL + "/services/apps/local"
+const ApplicationBaseURL = BaseURL + "/services/apps/local/%s"
 
 type Client struct {
 	httpClient *http.Client
@@ -127,6 +128,25 @@ func (c *Client) GetApplications(ctx context.Context, getApplicationsVars Pagina
 	return handlePagination(&applicationsResponse)
 }
 
+// GetApplication returns specific application under Splunk instance.
+func (c *Client) GetApplication(ctx context.Context, applicationName string) (*Application, error) {
+	var applicationResponse Response[Application]
+
+	err := c.doRequest(
+		ctx,
+		fmt.Sprintf(ApplicationBaseURL, applicationName),
+		&applicationResponse,
+		nil,
+		"",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &applicationResponse.Values[0], nil
+}
+
 // Handles pagination for Splunk API
 // `offset` is 0-indexed representation of the current page,
 // `perPage` is the number of items per page and
@@ -141,15 +161,19 @@ func handlePagination[T any](response *Response[T]) ([]T, string, error) {
 	return response.Values, "", nil
 }
 
-func setupPagination(query *url.Values, limit int, page string) {
+func setupPagination(query *url.Values, paginationVars *PaginationVars) {
+	if paginationVars == nil {
+		return
+	}
+
 	// add limit
-	if limit != 0 {
-		query.Set("count", strconv.Itoa(limit))
+	if paginationVars.Limit != 0 {
+		query.Set("count", strconv.Itoa(paginationVars.Limit))
 	}
 
 	// add page
-	if page != "" {
-		query.Set("offset", page)
+	if paginationVars.Page != "" {
+		query.Set("offset", paginationVars.Page)
 	}
 }
 
@@ -180,7 +204,7 @@ func (c *Client) doRequest(
 	// setup query params
 	queryParams := url.Values{}
 	setupQueryParams(&queryParams)
-	setupPagination(&queryParams, paginationVars.Limit, paginationVars.Page)
+	setupPagination(&queryParams, paginationVars)
 	setupFiltering(&queryParams, filter)
 
 	if queryParams != nil {

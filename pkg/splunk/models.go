@@ -1,7 +1,8 @@
 package splunk
 
 type BaseResource struct {
-	Id string `json:"id"`
+	Id  string `json:"id"`
+	ACL ACL    `json:"acl"`
 }
 
 type Content struct {
@@ -32,7 +33,6 @@ type Role struct {
 
 type Application struct {
 	BaseResource
-	ACL     ACL    `json:"acl"`
 	Name    string `json:"name"`
 	Author  string `json:"author"`
 	Content struct {

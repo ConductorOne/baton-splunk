@@ -38,19 +38,10 @@ func applicationResource(ctx context.Context, application *splunk.Application) (
 	}
 
 	displayName := titleCaser.String(application.Name)
-
-	profile := map[string]interface{}{
-		"application_id":          applicationID,
-		"application_name":        application.Name,
-		"application_read_roles":  strings.Join(application.ACL.Perms.Read, ","),
-		"application_write_roles": strings.Join(application.ACL.Perms.Write, ","),
-	}
-
-	resource, err := rs.NewGroupResource(
+	resource, err := rs.NewResource(
 		displayName,
 		resourceTypeApplication,
 		applicationID,
-		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
 	)
 	if err != nil {
 		return nil, err
@@ -130,23 +121,12 @@ func (a *applicationResourceType) Grants(ctx context.Context, resource *v2.Resou
 		return nil, "", nil, err
 	}
 
-	groupTrait, err := rs.GetGroupTrait(resource)
+	application, err := a.client.GetApplication(ctx, resource.Id.Resource)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, fmt.Errorf("splunk-connector: failed to get application: %w", err)
 	}
 
-	applicationReadRolesPayload, ok := rs.GetProfileStringValue(groupTrait.Profile, "application_read_roles")
-	if !ok {
-		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing application read permissions from application profile")
-	}
-
-	applicationWriteRolesPayload, ok := rs.GetProfileStringValue(groupTrait.Profile, "application_write_roles")
-	if !ok {
-		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing application write permissions from application profile")
-	}
-
-	applicationReadRoles := strings.Split(applicationReadRolesPayload, ",")
-	applicationWriteRoles := strings.Split(applicationWriteRolesPayload, ",")
+	applicationReadRoles, applicationWriteRoles := application.ACL.Perms.Read, application.ACL.Perms.Write
 
 	var rv []*v2.Grant
 	users, nextPage, err := a.client.GetUsers(
