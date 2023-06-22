@@ -40,6 +40,14 @@ type Application struct {
 	} `json:"content"`
 }
 
+type Capability struct {
+	BaseResource
+	Name    string `json:"name"`
+	Content struct {
+		Capabilities []string `json:"capabilities"`
+	} `json:"content"`
+}
+
 type ACL struct {
 	App   string `json:"app"`
 	Perms struct {

@@ -12,16 +12,21 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const BaseURL = "https://ms-work-g.local:8089/"
-const UsersBaseURL = BaseURL + "/services/authentication/users"
-const RolesBaseURL = BaseURL + "/services/authorization/roles"
-const CapabilitiesBaseURL = BaseURL + "/services/authorization/capabilities"
-const ApplicationsBaseURL = BaseURL + "/services/apps/local"
-const ApplicationBaseURL = BaseURL + "/services/apps/local/%s"
+const Localhost = "localhost"
+const BaseURL = "https://%s:8089/"
+const CloudBaseURL = "https://%s.splunkcloud.com:8089/"
+
+const UsersBaseURL = "/services/authentication/users"
+const RolesBaseURL = "/services/authorization/roles"
+const CapabilitiesBaseURL = "/services/authorization/grantable_capabilities/capabilities"
+const ApplicationsBaseURL = "/services/apps/local"
+const ApplicationBaseURL = "/services/apps/local/%s"
 
 type Client struct {
 	httpClient *http.Client
 	Token      string
+	Cloud      bool
+	Deployment string
 }
 
 type PaginationData struct {
@@ -40,11 +45,38 @@ type Response[T any] struct {
 	PaginationData `json:"paging"`
 }
 
-func NewClient(httpClient *http.Client, token string) *Client {
+func NewClient(httpClient *http.Client, token string, cloud bool) *Client {
 	return &Client{
 		httpClient: httpClient,
 		Token:      token,
+		Cloud:      cloud,
+		Deployment: Localhost,
 	}
+}
+
+func (c *Client) PointToDeployment(deployment string) {
+	c.Deployment = deployment
+}
+
+func (c *Client) PointToLocalhost() {
+	c.Deployment = Localhost
+}
+
+func (c *Client) ResetPointer() {
+	c.Deployment = ""
+}
+
+// GetUrl returns the full URL for the given endpoint based on platform.
+func (c *Client) CreateUrl(endpoint string) string {
+	if c.Cloud {
+		return fmt.Sprintf(CloudBaseURL, c.Deployment) + endpoint
+	} else {
+		return fmt.Sprintf(BaseURL, c.Deployment) + endpoint
+	}
+}
+
+func (c *Client) IsCloudPlatform() bool {
+	return c.Cloud
 }
 
 // GetUsers returns all users under specific Splunk instance.
@@ -53,7 +85,7 @@ func (c *Client) GetUsers(ctx context.Context, getUsersVars PaginationVars) ([]U
 
 	err := c.doRequest(
 		ctx,
-		UsersBaseURL,
+		c.CreateUrl(UsersBaseURL),
 		&usersResponse,
 		&getUsersVars,
 		"",
@@ -77,7 +109,7 @@ func (c *Client) GetUsersByRole(ctx context.Context, getUsersVars PaginationVars
 
 	err := c.doRequest(
 		ctx,
-		UsersBaseURL,
+		c.CreateUrl(UsersBaseURL),
 		&usersResponse,
 		&getUsersVars,
 		roleFilter,
@@ -96,7 +128,7 @@ func (c *Client) GetRoles(ctx context.Context, getRolesVars PaginationVars) ([]R
 
 	err := c.doRequest(
 		ctx,
-		RolesBaseURL,
+		c.CreateUrl(RolesBaseURL),
 		&rolesResponse,
 		&getRolesVars,
 		"",
@@ -115,7 +147,7 @@ func (c *Client) GetApplications(ctx context.Context, getApplicationsVars Pagina
 
 	err := c.doRequest(
 		ctx,
-		ApplicationsBaseURL,
+		c.CreateUrl(ApplicationsBaseURL),
 		&applicationsResponse,
 		&getApplicationsVars,
 		"",
@@ -134,7 +166,7 @@ func (c *Client) GetApplication(ctx context.Context, applicationName string) (*A
 
 	err := c.doRequest(
 		ctx,
-		fmt.Sprintf(ApplicationBaseURL, applicationName),
+		c.CreateUrl(fmt.Sprintf(ApplicationBaseURL, applicationName)),
 		&applicationResponse,
 		nil,
 		"",
@@ -145,6 +177,25 @@ func (c *Client) GetApplication(ctx context.Context, applicationName string) (*A
 	}
 
 	return &applicationResponse.Values[0], nil
+}
+
+// GetCapabilities returns all grantable capabilities under specific Splunk instance.
+func (c *Client) GetCapabilities(ctx context.Context, getCapabilitiesVars PaginationVars) ([]Capability, string, error) {
+	var capabilitiesResponse Response[Capability]
+
+	err := c.doRequest(
+		ctx,
+		c.CreateUrl(CapabilitiesBaseURL),
+		&capabilitiesResponse,
+		&getCapabilitiesVars,
+		"",
+	)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return handlePagination(&capabilitiesResponse)
 }
 
 // Handles pagination for Splunk API

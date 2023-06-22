@@ -37,7 +37,16 @@ func main() {
 
 func getConnector(ctx context.Context, cfg *config) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-	splunkConnector, err := connector.New(ctx, cfg.AccessToken, cfg.Unsafe, cfg.Verbose)
+	splunkConnector, err := connector.New(
+		ctx,
+		cfg.AccessToken,
+		connector.CLIConfig{
+			Unsafe:  cfg.Unsafe,
+			Verbose: cfg.Verbose,
+			Cloud:   cfg.Cloud,
+		},
+		cfg.Deployments,
+	)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

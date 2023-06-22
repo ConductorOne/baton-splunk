@@ -154,20 +154,6 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role name from role profile")
 	}
 
-	var rv []*v2.Grant
-	var roleCapabilities []string
-	var roleCapabilitiesPayload string
-
-	// Prepare also role capabilities if verbose mode is enabled.
-	if r.verbose {
-		roleCapabilitiesPayload, ok = rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
-		if !ok {
-			return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role capabilities from role profile")
-		}
-
-		roleCapabilities = strings.Split(roleCapabilitiesPayload, ",")
-	}
-
 	users, nextPage, err := r.client.GetUsersByRole(
 		ctx,
 		splunk.PaginationVars{
@@ -185,6 +171,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 		return nil, "", nil, err
 	}
 
+	var rv []*v2.Grant
 	for _, user := range users {
 		userCopy := user
 
@@ -193,26 +180,12 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 			return nil, "", nil, fmt.Errorf("splunk-connector: failed to build user resource: %w", err)
 		}
 
-		for _, role := range user.Content.Roles {
-			if role == roleName {
-				rv = append(rv, grant.NewGrant(
-					resource,
-					roleMember,
-					ur.Id,
-				))
+		rv = append(rv, grant.NewGrant(
+			resource,
+			roleMember,
+			ur.Id,
+		))
 
-				// Grant also role capabilities if verbose mode is enabled.
-				if r.verbose {
-					for _, roleCapability := range roleCapabilities {
-						rv = append(rv, grant.NewGrant(
-							resource,
-							roleCapability,
-							ur.Id,
-						))
-					}
-				}
-			}
-		}
 	}
 
 	return rv, pageToken, nil, nil
