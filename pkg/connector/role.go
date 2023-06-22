@@ -113,7 +113,7 @@ func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 
 	if r.verbose {
 		// add also role capabilities as entitlements
-		roleTrait, err := rs.GetRoleTrait(resource)
+		roleTrait, err := rs.GetGroupTrait(resource)
 		if err != nil {
 			return nil, "", nil, err
 		}
