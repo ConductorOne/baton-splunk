@@ -30,7 +30,7 @@ func deploymentResource(ctx context.Context, deployment string) (*v2.Resource, e
 
 	resource, err := rs.NewResource(
 		displayName,
-		resourceTypeRole,
+		resourceTypeDeployment,
 		deployment,
 		rs.WithAnnotation(
 			&v2.ChildResourceType{ResourceTypeId: resourceTypeRole.Id},
@@ -148,7 +148,7 @@ func (d *deploymentResourceType) Grants(ctx context.Context, resource *v2.Resour
 		for _, role := range roles {
 			roleCopy := role
 
-			rr, err := roleResource(ctx, &roleCopy)
+			rr, err := roleResource(ctx, &roleCopy, resource.ParentResourceId)
 			if err != nil {
 				return nil, "", nil, fmt.Errorf("splunk-connector: failed to build role resource: %w", err)
 			}

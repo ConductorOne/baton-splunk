@@ -52,7 +52,7 @@ func (sp *Splunk) ResourceSyncers(ctx context.Context) []connectorbuilder.Resour
 	builders := []connectorbuilder.ResourceSyncer{
 		deploymentBuilder(sp.client, sp.verbose, sp.deployments),
 		userBuilder(sp.client),
-		roleBuilder(sp.client, sp.verbose),
+		roleBuilder(sp.client),
 	}
 
 	// Applications are only supported for on-premise Splunk deployments.
@@ -96,7 +96,7 @@ type CLIConfig struct {
 }
 
 // New returns the Splunk connector.
-func New(ctx context.Context, password string, config CLIConfig, deployments []string) (*Splunk, error) {
+func New(ctx context.Context, auth string, config CLIConfig, deployments []string) (*Splunk, error) {
 	options := []uhttp.Option{
 		uhttp.WithLogger(true, ctxzap.Extract(ctx)),
 	}
@@ -120,7 +120,7 @@ func New(ctx context.Context, password string, config CLIConfig, deployments []s
 	}
 
 	return &Splunk{
-		client:      splunk.NewClient(httpClient, password, config.Cloud),
+		client:      splunk.NewClient(httpClient, auth, config.Cloud),
 		verbose:     config.Verbose,
 		cloud:       config.Cloud,
 		deployments: deployments,

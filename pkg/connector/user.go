@@ -21,7 +21,7 @@ func (u *userResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 }
 
 // Create a new connector resource for a splunk User.
-func userResource(ctx context.Context, user *splunk.User) (*v2.Resource, error) {
+func userResource(ctx context.Context, user *splunk.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"login":     user.Content.Email,
 		"user_id":   user.Id,
@@ -36,6 +36,7 @@ func userResource(ctx context.Context, user *splunk.User) (*v2.Resource, error) 
 			resource.WithEmail(user.Content.Email, true),
 			resource.WithUserProfile(profile),
 		},
+		resource.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
 		return nil, err
@@ -45,6 +46,10 @@ func userResource(ctx context.Context, user *splunk.User) (*v2.Resource, error) 
 }
 
 func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	if parentID != nil {
+		return nil, "", nil, nil
+	}
+
 	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeUser.Id})
 	if err != nil {
 		return nil, "", nil, err
@@ -70,7 +75,7 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 	for _, user := range users {
 		userCopy := user
 
-		ur, err := userResource(ctx, &userCopy)
+		ur, err := userResource(ctx, &userCopy, parentID)
 		if err != nil {
 			return nil, "", nil, err
 		}

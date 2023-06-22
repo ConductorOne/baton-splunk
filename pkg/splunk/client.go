@@ -24,7 +24,7 @@ const ApplicationBaseURL = "/services/apps/local/%s"
 
 type Client struct {
 	httpClient *http.Client
-	Token      string
+	Auth       string
 	Cloud      bool
 	Deployment string
 }
@@ -45,10 +45,10 @@ type Response[T any] struct {
 	PaginationData `json:"paging"`
 }
 
-func NewClient(httpClient *http.Client, token string, cloud bool) *Client {
+func NewClient(httpClient *http.Client, auth string, cloud bool) *Client {
 	return &Client{
 		httpClient: httpClient,
-		Token:      token,
+		Auth:       auth,
 		Cloud:      cloud,
 		Deployment: Localhost,
 	}
@@ -264,7 +264,7 @@ func (c *Client) doRequest(
 
 	// setup headers
 	req.Header.Set("content-type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Authorization", c.Auth)
 
 	rawResponse, err := c.httpClient.Do(req)
 	if err != nil {

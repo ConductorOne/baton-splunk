@@ -19,7 +19,6 @@ const roleMember = "member"
 type roleResourceType struct {
 	resourceType *v2.ResourceType
 	client       *splunk.Client
-	verbose      bool
 }
 
 func (r *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
@@ -27,7 +26,7 @@ func (r *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 }
 
 // roleResource creates a new connector resource for a Splunk Role.
-func roleResource(ctx context.Context, role *splunk.Role) (*v2.Resource, error) {
+func roleResource(ctx context.Context, role *splunk.Role, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	// get rid of leading url address in Id
 	var roleID string
 	slashIndex := strings.LastIndex(role.Id, "/")
@@ -55,6 +54,7 @@ func roleResource(ctx context.Context, role *splunk.Role) (*v2.Resource, error) 
 		resourceTypeRole,
 		roleID,
 		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
+		rs.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
 		return nil, err
@@ -64,6 +64,10 @@ func roleResource(ctx context.Context, role *splunk.Role) (*v2.Resource, error) 
 }
 
 func (r *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	if parentID != nil {
+		return nil, "", nil, nil
+	}
+
 	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeRole.Id})
 	if err != nil {
 		return nil, "", nil, err
@@ -89,7 +93,7 @@ func (r *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 	for _, role := range roles {
 		roleCopy := role
 
-		rr, err := roleResource(ctx, &roleCopy)
+		rr, err := roleResource(ctx, &roleCopy, parentID)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -110,30 +114,6 @@ func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 	}
 
 	rv = append(rv, ent.NewAssignmentEntitlement(resource, roleMember, entitlementOptions...))
-
-	if r.verbose {
-		// add also role capabilities as entitlements
-		roleTrait, err := rs.GetGroupTrait(resource)
-		if err != nil {
-			return nil, "", nil, err
-		}
-
-		roleCapabilitiesPayload, ok := rs.GetProfileStringValue(roleTrait.Profile, "role_capabilities")
-		if !ok {
-			return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role capabilities from role profile")
-		}
-
-		roleCapabilities := strings.Split(roleCapabilitiesPayload, ",")
-		for _, roleCapability := range roleCapabilities {
-			entitlementOptions := []ent.EntitlementOption{
-				ent.WithGrantableTo(resourceTypeRole),
-				ent.WithDisplayName(fmt.Sprintf("%s capability", roleCapability)),
-				ent.WithDescription(fmt.Sprintf("%s Splunk capability", roleCapability)),
-			}
-
-			rv = append(rv, ent.NewPermissionEntitlement(resource, roleCapability, entitlementOptions...))
-		}
-	}
 
 	return rv, "", nil, nil
 }
@@ -175,7 +155,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 	for _, user := range users {
 		userCopy := user
 
-		ur, err := userResource(ctx, &userCopy)
+		ur, err := userResource(ctx, &userCopy, resource.ParentResourceId)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("splunk-connector: failed to build user resource: %w", err)
 		}
@@ -191,10 +171,9 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 	return rv, pageToken, nil, nil
 }
 
-func roleBuilder(client *splunk.Client, verbose bool) *roleResourceType {
+func roleBuilder(client *splunk.Client) *roleResourceType {
 	return &roleResourceType{
 		resourceType: resourceTypeRole,
 		client:       client,
-		verbose:      verbose,
 	}
 }

@@ -27,7 +27,7 @@ func (a *applicationResourceType) ResourceType(_ context.Context) *v2.ResourceTy
 }
 
 // applicationResource creates a new connector resource for a Splunk Application.
-func applicationResource(ctx context.Context, application *splunk.Application) (*v2.Resource, error) {
+func applicationResource(ctx context.Context, application *splunk.Application, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	// get rid of leading url address in Id
 	var applicationID string
 	slashIndex := strings.LastIndex(application.Id, "/")
@@ -42,6 +42,7 @@ func applicationResource(ctx context.Context, application *splunk.Application) (
 		displayName,
 		resourceTypeApplication,
 		applicationID,
+		rs.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
 		return nil, err
@@ -51,6 +52,10 @@ func applicationResource(ctx context.Context, application *splunk.Application) (
 }
 
 func (a *applicationResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	if parentID != nil {
+		return nil, "", nil, nil
+	}
+
 	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeApplication.Id})
 	if err != nil {
 		return nil, "", nil, err
@@ -76,7 +81,7 @@ func (a *applicationResourceType) List(ctx context.Context, parentID *v2.Resourc
 	for _, application := range applications {
 		applicationCopy := application
 
-		rr, err := applicationResource(ctx, &applicationCopy)
+		rr, err := applicationResource(ctx, &applicationCopy, parentID)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -148,7 +153,7 @@ func (a *applicationResourceType) Grants(ctx context.Context, resource *v2.Resou
 	for _, user := range users {
 		userCopy := user
 
-		ur, err := userResource(ctx, &userCopy)
+		ur, err := userResource(ctx, &userCopy, resource.ParentResourceId)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("splunk-connector: failed to build user resource: %w", err)
 		}
