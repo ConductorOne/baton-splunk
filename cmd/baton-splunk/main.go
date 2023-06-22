@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 
@@ -35,11 +36,27 @@ func main() {
 	}
 }
 
+func constructAuth(cfg *config) string {
+	if cfg.AccessToken != "" {
+		return "Bearer " + cfg.AccessToken
+	}
+
+	if cfg.Username != "" {
+		credentials := fmt.Sprintf("%s:%s", cfg.Username, cfg.Password)
+		encodedCredentials := base64.StdEncoding.EncodeToString([]byte(credentials))
+
+		return "Basic " + encodedCredentials
+	}
+
+	return ""
+}
+
 func getConnector(ctx context.Context, cfg *config) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
+
 	splunkConnector, err := connector.New(
 		ctx,
-		cfg.AccessToken,
+		constructAuth(cfg),
 		connector.CLIConfig{
 			Unsafe:  cfg.Unsafe,
 			Verbose: cfg.Verbose,
