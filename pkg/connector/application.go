@@ -20,6 +20,8 @@ const writePerm = "write"
 type applicationResourceType struct {
 	resourceType *v2.ResourceType
 	client       *splunk.Client
+
+	verbose bool
 }
 
 func (a *applicationResourceType) ResourceType(_ context.Context) *v2.ResourceType {
@@ -93,6 +95,10 @@ func (a *applicationResourceType) List(ctx context.Context, parentID *v2.Resourc
 }
 
 func (a *applicationResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+	if !a.verbose {
+		return nil, "", nil, nil
+	}
+
 	var rv []*v2.Entitlement
 
 	entitlementOptions := []ent.EntitlementOption{
@@ -121,6 +127,10 @@ func (a *applicationResourceType) Entitlements(_ context.Context, resource *v2.R
 }
 
 func (a *applicationResourceType) Grants(ctx context.Context, resource *v2.Resource, pt *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+	if !a.verbose {
+		return nil, "", nil, nil
+	}
+
 	bag, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeUser.Id})
 	if err != nil {
 		return nil, "", nil, err
@@ -180,9 +190,10 @@ func (a *applicationResourceType) Grants(ctx context.Context, resource *v2.Resou
 	return rv, pageToken, nil, nil
 }
 
-func applicationBuilder(client *splunk.Client) *applicationResourceType {
+func applicationBuilder(client *splunk.Client, verbose bool) *applicationResourceType {
 	return &applicationResourceType{
 		resourceType: resourceTypeApplication,
 		client:       client,
+		verbose:      verbose,
 	}
 }
