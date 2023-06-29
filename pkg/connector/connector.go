@@ -73,14 +73,28 @@ func (sp *Splunk) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 
 // Validate hits the Splunk API to validate that the configured credentials are valid and compatible.
 func (sp *Splunk) Validate(ctx context.Context) (annotations.Annotations, error) {
-	// TODO: Handle auth with multiple deployments
+	if len(sp.deployments) == 0 {
+		// no need to point to a deployment since client is initialized with default localhost deployment
+		_, _, err := sp.client.GetUsers(ctx, splunk.PaginationVars{Limit: 1})
+		if err != nil {
+			return nil, status.Error(
+				codes.Unauthenticated,
+				"Provided Password or Access Token is invalid for the given localhost deployment",
+			)
+		}
+	}
+
 	for _, deployment := range sp.deployments {
 		sp.client.PointToDeployment(deployment)
 
 		// should be able to list users
 		_, _, err := sp.client.GetUsers(ctx, splunk.PaginationVars{Limit: 1})
 		if err != nil {
-			return nil, status.Error(codes.Unauthenticated, "Provided Access Token is invalid")
+			return nil, status.Errorf(
+				codes.Unauthenticated,
+				"Provided Password or Access Token is invalid for the given deployment %s",
+				deployment,
+			)
 		}
 	}
 

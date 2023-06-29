@@ -36,8 +36,6 @@ func deploymentResource(ctx context.Context, deployment string) (*v2.Resource, e
 			&v2.ChildResourceType{ResourceTypeId: resourceTypeRole.Id},
 			&v2.ChildResourceType{ResourceTypeId: resourceTypeUser.Id},
 			&v2.ChildResourceType{ResourceTypeId: resourceTypeApplication.Id},
-			// TODO: idp Applications
-			// &v2.ChildResourceType{ResourceTypeId: resourceTypeApplicationIdp.Id},
 		),
 	)
 	if err != nil {
@@ -52,7 +50,7 @@ func (d *deploymentResourceType) List(ctx context.Context, _ *v2.ResourceId, _ *
 
 	// If no deployments are specified, return the localhost deployment
 	if len(d.deployments) == 0 {
-		dr, err := deploymentResource(ctx, "localhost")
+		dr, err := deploymentResource(ctx, splunk.Localhost)
 		if err != nil {
 			return nil, "", nil, err
 		}
