@@ -27,13 +27,9 @@ func (r *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 
 // roleResource creates a new connector resource for a Splunk Role.
 func roleResource(ctx context.Context, role *splunk.Role, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
-	// get rid of leading url address in Id
-	var roleID string
-	slashIndex := strings.LastIndex(role.Id, "/")
-	if slashIndex != -1 {
-		roleID = role.Id[slashIndex+1:]
-	} else {
-		return nil, fmt.Errorf("splunk-connector: failed to parse role id: %s", role.Id)
+	roleID, err := removeLeadingUrl(role.Id)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: %w", err)
 	}
 
 	displayName := titleCaser.String(role.Name)

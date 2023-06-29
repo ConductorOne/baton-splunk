@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
@@ -30,13 +29,9 @@ func (a *applicationResourceType) ResourceType(_ context.Context) *v2.ResourceTy
 
 // applicationResource creates a new connector resource for a Splunk Application.
 func applicationResource(ctx context.Context, application *splunk.Application, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
-	// get rid of leading url address in Id
-	var applicationID string
-	slashIndex := strings.LastIndex(application.Id, "/")
-	if slashIndex != -1 {
-		applicationID = application.Id[slashIndex+1:]
-	} else {
-		return nil, fmt.Errorf("splunk-connector: failed to parse application id: %s", application.Id)
+	applicationID, err := removeLeadingUrl(application.Id)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: %w", err)
 	}
 
 	displayName := titleCaser.String(application.Name)
@@ -83,12 +78,12 @@ func (a *applicationResourceType) List(ctx context.Context, parentID *v2.Resourc
 	for _, application := range applications {
 		applicationCopy := application
 
-		rr, err := applicationResource(ctx, &applicationCopy, parentID)
+		ar, err := applicationResource(ctx, &applicationCopy, parentID)
 		if err != nil {
 			return nil, "", nil, err
 		}
 
-		rv = append(rv, rr)
+		rv = append(rv, ar)
 	}
 
 	return rv, pageToken, nil, nil
@@ -99,28 +94,23 @@ func (a *applicationResourceType) Entitlements(_ context.Context, resource *v2.R
 		return nil, "", nil, nil
 	}
 
+	grantableToUser := ent.WithGrantableTo(resourceTypeUser)
+	entDescription := ent.WithDescription(fmt.Sprintf("%s Splunk application", resource.DisplayName))
+
 	var rv []*v2.Entitlement
-
-	entitlementOptions := []ent.EntitlementOption{
-		ent.WithGrantableTo(resourceTypeUser),
-		ent.WithDescription(fmt.Sprintf("%s Splunk application", resource.DisplayName)),
-	}
-
 	rv = append(rv, ent.NewPermissionEntitlement(
 		resource,
 		readPerm,
-		append(
-			[]ent.EntitlementOption{ent.WithDisplayName(fmt.Sprintf("%s application READ", resource.DisplayName))},
-			entitlementOptions...,
-		)...,
+		grantableToUser,
+		entDescription,
+		ent.WithDisplayName(fmt.Sprintf("%s application READ", resource.DisplayName)),
 	))
 	rv = append(rv, ent.NewPermissionEntitlement(
 		resource,
 		writePerm,
-		append(
-			[]ent.EntitlementOption{ent.WithDisplayName(fmt.Sprintf("%s application WRITE", resource.DisplayName))},
-			entitlementOptions...,
-		)...,
+		grantableToUser,
+		entDescription,
+		ent.WithDisplayName(fmt.Sprintf("%s application WRITE", resource.DisplayName)),
 	))
 
 	return rv, "", nil, nil

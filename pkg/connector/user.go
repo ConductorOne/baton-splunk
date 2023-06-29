@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
@@ -23,13 +22,9 @@ func (u *userResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 
 // Create a new connector resource for a splunk User.
 func userResource(ctx context.Context, user *splunk.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
-	// get rid of leading url address in Id
-	var userID string
-	slashIndex := strings.LastIndex(user.Id, "/")
-	if slashIndex != -1 {
-		userID = user.Id[slashIndex+1:]
-	} else {
-		return nil, fmt.Errorf("splunk-connector: failed to parse user id: %s", user.Id)
+	userID, err := removeLeadingUrl(user.Id)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: %w", err)
 	}
 
 	profile := map[string]interface{}{

@@ -1,6 +1,9 @@
 package connector
 
 import (
+	"fmt"
+	"strings"
+
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
@@ -47,4 +50,14 @@ func containsRole(roles []string, role string) bool {
 	}
 
 	return false
+}
+
+func removeLeadingUrl(url string) (string, error) {
+	slashIndex := strings.LastIndex(url, "/")
+
+	if slashIndex != -1 {
+		return url[slashIndex+1:], nil
+	}
+
+	return "", fmt.Errorf("failed to parse resource id: %s", url)
 }
