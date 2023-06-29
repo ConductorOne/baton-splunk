@@ -165,7 +165,6 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 			roleMember,
 			ur.Id,
 		))
-
 	}
 
 	return rv, pageToken, nil, nil

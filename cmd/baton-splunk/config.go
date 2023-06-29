@@ -46,5 +46,9 @@ func cmdFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().Bool("unsafe", false, "Allow insecure TLS connections to Splunk. ($BATON_UNSAFE)")
 	cmd.PersistentFlags().Bool("verbose", false, "Enable listing verbose entitlements for Role capabilities. ($BATON_VERBOSE)")
 	cmd.PersistentFlags().Bool("cloud", false, "Switches to cloud API endpoints. ($BATON_CLOUD)")
-	cmd.PersistentFlags().StringSlice("deployments", []string{}, "Limit syncing to specific deployments by specifying cloud deployment names or IP addresses of on-premise deployments. ($BATON_DEPLOYMENTS)")
+	cmd.PersistentFlags().StringSlice(
+		"deployments",
+		[]string{},
+		"Limit syncing to specific deployments by specifying cloud deployment names or IP addresses of on-premise deployments. ($BATON_DEPLOYMENTS)",
+	)
 }
