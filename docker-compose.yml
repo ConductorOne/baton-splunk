@@ -1,0 +1,26 @@
+version: "3"
+services:
+  splunk:
+    image: splunk/splunk:latest
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+      - "8089:8089"
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_PASSWORD=$SPLUNK_ADMIN_PASSWORD
+
+  connector:
+    image: ghcr.io/conductorone/baton-splunk:latest
+    depends_on:
+      splunk:
+        condition: service_healthy
+    environment:
+      - BATON_TOKEN=$BATON_TOKEN
+      - BATON_USERNAME=${BATON_USERNAME:-admin}
+      - BATON_PASSWORD=$BATON_PASSWORD
+      - BATON_UNSAFE=${BATON_UNSAFE:-true}
+      - BATON_VERBOSE=$BATON_VERBOSE
+      - BATON_DEPLOYMENTS=$BATON_DEPLOYMENTS
+    volumes:
+      - .:/out
