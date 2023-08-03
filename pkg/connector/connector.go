@@ -2,39 +2,141 @@ package connector
 
 import (
 	"context"
-	"fmt"
+	"crypto/tls"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/conductorone/baton-sdk/pkg/uhttp"
+	"github.com/conductorone/baton-splunk/pkg/splunk"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// TODO: implement your connector here
-type connectorImpl struct {
+var (
+	resourceTypeDeployment = &v2.ResourceType{
+		Id:          "deployment",
+		DisplayName: "Deployment",
+	}
+	resourceTypeUser = &v2.ResourceType{
+		Id:          "user",
+		DisplayName: "User",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_USER,
+		},
+		Annotations: annotationsForUserResourceType(),
+	}
+	resourceTypeRole = &v2.ResourceType{
+		Id:          "role",
+		DisplayName: "Role",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_GROUP,
+		},
+	}
+	resourceTypeApplication = &v2.ResourceType{
+		Id:          "application",
+		DisplayName: "Application",
+	}
+)
+
+type Splunk struct {
+	client  *splunk.Client
+	verbose bool
+
+	cloud       bool
+	deployments []string
 }
 
-func (c *connectorImpl) ListResourceTypes(ctx context.Context, req *v2.ResourceTypesServiceListResourceTypesRequest) (*v2.ResourceTypesServiceListResourceTypesResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+func (sp *Splunk) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
+	builders := []connectorbuilder.ResourceSyncer{
+		deploymentBuilder(sp.client, sp.verbose, sp.deployments),
+		userBuilder(sp.client),
+		roleBuilder(sp.client),
+	}
+
+	// Applications are only supported for on-premise Splunk deployments.
+	if !sp.client.Cloud {
+		builders = append(builders, applicationBuilder(sp.client, sp.verbose))
+	}
+
+	return builders
 }
 
-func (c *connectorImpl) ListResources(ctx context.Context, req *v2.ResourcesServiceListResourcesRequest) (*v2.ResourcesServiceListResourcesResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+// Metadata returns metadata about the connector.
+func (sp *Splunk) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
+	return &v2.ConnectorMetadata{
+		DisplayName: "Splunk",
+		Description: "Connector syncing Splunk users their roles and other Splunk resources to Baton.",
+	}, nil
 }
 
-func (c *connectorImpl) ListEntitlements(ctx context.Context, req *v2.EntitlementsServiceListEntitlementsRequest) (*v2.EntitlementsServiceListEntitlementsResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+// Validate hits the Splunk API to validate that the configured credentials are valid and compatible.
+func (sp *Splunk) Validate(ctx context.Context) (annotations.Annotations, error) {
+	if len(sp.deployments) == 0 {
+		// no need to point to a deployment since client is initialized with default localhost deployment
+		_, _, err := sp.client.GetUsers(ctx, splunk.PaginationVars{Limit: 1})
+		if err != nil {
+			return nil, status.Error(
+				codes.Unauthenticated,
+				"Provided Password or Access Token is invalid for the given localhost deployment",
+			)
+		}
+	}
+
+	for _, deployment := range sp.deployments {
+		sp.client.PointToDeployment(deployment)
+
+		// should be able to list users
+		_, _, err := sp.client.GetUsers(ctx, splunk.PaginationVars{Limit: 1})
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Unauthenticated,
+				"Provided Password or Access Token is invalid for the given deployment %s",
+				deployment,
+			)
+		}
+	}
+
+	sp.client.ResetPointer()
+
+	return nil, nil
 }
 
-func (c *connectorImpl) ListGrants(ctx context.Context, req *v2.GrantsServiceListGrantsRequest) (*v2.GrantsServiceListGrantsResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+type CLIConfig struct {
+	Unsafe  bool
+	Verbose bool
+	Cloud   bool
 }
 
-func (c *connectorImpl) GetMetadata(ctx context.Context, req *v2.ConnectorServiceGetMetadataRequest) (*v2.ConnectorServiceGetMetadataResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
+// New returns the Splunk connector.
+func New(ctx context.Context, auth string, config CLIConfig, deployments []string) (*Splunk, error) {
+	options := []uhttp.Option{
+		uhttp.WithLogger(true, ctxzap.Extract(ctx)),
+	}
 
-func (c *connectorImpl) Validate(ctx context.Context, req *v2.ConnectorServiceValidateRequest) (*v2.ConnectorServiceValidateResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
+	// Skip TLS verification if flag `unsafe` is specified.
+	if config.Unsafe { // #nosec G402
+		options = append(
+			options,
+			uhttp.WithTLSClientConfig(
+				&tls.Config{InsecureSkipVerify: true},
+			),
+		)
+	}
 
-func (c *connectorImpl) GetAsset(req *v2.AssetServiceGetAssetRequest, server v2.AssetService_GetAssetServer) error {
-	return fmt.Errorf("not implemented")
+	httpClient, err := uhttp.NewClient(
+		ctx,
+		options...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Splunk{
+		client:      splunk.NewClient(httpClient, auth, config.Cloud),
+		verbose:     config.Verbose,
+		cloud:       config.Cloud,
+		deployments: deployments,
+	}, nil
 }
