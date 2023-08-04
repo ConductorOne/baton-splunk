@@ -13,7 +13,7 @@ Gaining access to the Splunk API varies based on platform, Enterprise or Cloud.
 ## Splunk API Access
 ### Splunk Cloud
 
-In case of Splunk Cloud, you need to create a new instance and white list ip addresses of machines where this connector will be running or submit a support case. For more information, see [here](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2303/RESTTUT/RESTandCloud). 
+In case of Splunk Cloud, you need to create a new instance and allow list ip addresses of machines where this connector will be running or submit a support case. For more information, see [here](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2303/RESTTUT/RESTandCloud). 
 
 
 ### Splunk Enterprise
