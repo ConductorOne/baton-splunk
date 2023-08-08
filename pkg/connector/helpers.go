@@ -74,21 +74,31 @@ func extractResourceId(fullId string) (string, error) {
 	return idParts[1], nil
 }
 
-func removeRole(roles []string, targetRole string) []string {
-	var newRoles []string
+func extractEntitlementId(fullId string) (string, error) {
+	idParts := strings.Split(fullId, ":")
 
-	for _, role := range roles {
-		if role != targetRole {
-			newRoles = append(newRoles, role)
+	if len(idParts) != 3 {
+		return "", fmt.Errorf("invalid resource id: %s", fullId)
+	}
+
+	return idParts[2], nil
+}
+
+func removeResource(resources []string, targetResource string) []string {
+	var nr []string
+
+	for _, r := range resources {
+		if r != targetResource {
+			nr = append(nr, r)
 		}
 	}
 
-	return newRoles
+	return nr
 }
 
-func isRolePresent(roles []string, targetRole string) bool {
-	for _, role := range roles {
-		if role == targetRole {
+func isResourcePresent(resources []string, targetResource string) bool {
+	for _, r := range resources {
+		if r == targetResource {
 			return true
 		}
 	}
