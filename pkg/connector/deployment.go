@@ -179,10 +179,7 @@ func (d *deploymentResourceType) Grant(ctx context.Context, principal *v2.Resour
 		return nil, fmt.Errorf("splunk-connector: only roles can be granted capability membership")
 	}
 
-	targetCapabilityId, err := extractEntitlementId(entitlement.Id)
-	if err != nil {
-		return nil, fmt.Errorf("splunk-connector: failed to extract capability id from entitlement id: %w", err)
-	}
+	targetCapabilityId := entitlement.Slug
 
 	// get existing capabilities under role
 	role, err := d.client.GetRole(ctx, principal.Id.Resource)
@@ -223,10 +220,7 @@ func (d *deploymentResourceType) Revoke(ctx context.Context, grant *v2.Grant) (a
 		return nil, fmt.Errorf("splunk-connector: only roles can have capability membership revoked")
 	}
 
-	targetCapabilityId, err := extractEntitlementId(entitlement.Id)
-	if err != nil {
-		return nil, fmt.Errorf("splunk-connector: failed to extract capability id from entitlement id: %w", err)
-	}
+	targetCapabilityId := entitlement.Slug
 
 	// get existing capabilities under role
 	role, err := d.client.GetRole(ctx, principal.Id.Resource)

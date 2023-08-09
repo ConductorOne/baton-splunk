@@ -181,10 +181,7 @@ func (r *roleResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 		return nil, fmt.Errorf("splunk-connector: only users can be granted role membership")
 	}
 
-	targetRoleId, err := extractResourceId(entitlement.Id)
-	if err != nil {
-		return nil, fmt.Errorf("splunk-connector: failed to extract role id from entitlement id: %w", err)
-	}
+	roleId := entitlement.Resource.Id.Resource
 
 	// get existing roles under user
 	user, err := r.client.GetUser(ctx, principal.Id.Resource)
@@ -193,12 +190,12 @@ func (r *roleResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 	}
 
 	// check if role is already granted
-	if isResourcePresent(user.Content.Roles, targetRoleId) {
-		return nil, fmt.Errorf("splunk-connector: role %s already granted to user", targetRoleId)
+	if isResourcePresent(user.Content.Roles, roleId) {
+		return nil, fmt.Errorf("splunk-connector: role %s already granted to user", roleId)
 	}
 
 	// merge new role into existing roles
-	user.Content.Roles = append(user.Content.Roles, targetRoleId)
+	user.Content.Roles = append(user.Content.Roles, roleId)
 
 	// grant role membership
 	err = r.client.UpdateUserRoles(ctx, principal.Id.Resource, user.Content.Roles)
@@ -225,10 +222,7 @@ func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 		return nil, fmt.Errorf("splunk-connector: only users can have role membership revoked")
 	}
 
-	targetRoleId, err := extractResourceId(entitlement.Id)
-	if err != nil {
-		return nil, fmt.Errorf("splunk-connector: failed to extract role id from entitlement id: %w", err)
-	}
+	roleId := entitlement.Resource.Id.Resource
 
 	// get existing roles under user
 	user, err := r.client.GetUser(ctx, principal.Id.Resource)
@@ -237,12 +231,12 @@ func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 	}
 
 	// check if role is present in user's roles
-	if !isResourcePresent(user.Content.Roles, targetRoleId) {
-		return nil, fmt.Errorf("splunk-connector: role %s not present in user's roles", targetRoleId)
+	if !isResourcePresent(user.Content.Roles, roleId) {
+		return nil, fmt.Errorf("splunk-connector: role %s not present in user's roles", roleId)
 	}
 
 	// remove new role from existing roles
-	user.Content.Roles = removeResource(user.Content.Roles, targetRoleId)
+	user.Content.Roles = removeResource(user.Content.Roles, roleId)
 
 	// revoke role membership
 	err = r.client.UpdateUserRoles(ctx, principal.Id.Resource, user.Content.Roles)

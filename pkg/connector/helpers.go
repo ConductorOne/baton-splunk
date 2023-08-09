@@ -62,28 +62,6 @@ func removeLeadingUrl(url string) (string, error) {
 	return "", fmt.Errorf("failed to parse resource id: %s", url)
 }
 
-// Id of entitlement has following format <resource_type>:<resource_id>:<entitlement_id>
-// extract resource_id from it.
-func extractResourceId(fullId string) (string, error) {
-	idParts := strings.Split(fullId, ":")
-
-	if len(idParts) != 3 {
-		return "", fmt.Errorf("invalid resource id: %s", fullId)
-	}
-
-	return idParts[1], nil
-}
-
-func extractEntitlementId(fullId string) (string, error) {
-	idParts := strings.Split(fullId, ":")
-
-	if len(idParts) != 3 {
-		return "", fmt.Errorf("invalid resource id: %s", fullId)
-	}
-
-	return idParts[2], nil
-}
-
 func removeResource(resources []string, targetResource string) []string {
 	var nr []string
 
