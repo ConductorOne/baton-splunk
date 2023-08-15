@@ -26,7 +26,7 @@ func (d *deploymentResourceType) ResourceType(_ context.Context) *v2.ResourceTyp
 
 // deploymentResource creates a new connector resource for a Splunk Deployment under which all other resources are scoped.
 func deploymentResource(ctx context.Context, deployment string) (*v2.Resource, error) {
-	displayName := titleCaser.String(deployment)
+	displayName := titleCase(deployment)
 
 	resource, err := rs.NewResource(
 		displayName,

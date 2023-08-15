@@ -34,7 +34,7 @@ func applicationResource(ctx context.Context, application *splunk.Application, p
 		return nil, fmt.Errorf("splunk-connector: %w", err)
 	}
 
-	displayName := titleCaser.String(application.Name)
+	displayName := titleCase(application.Name)
 	resource, err := rs.NewResource(
 		displayName,
 		resourceTypeApplication,
