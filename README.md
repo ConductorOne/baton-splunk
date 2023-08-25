@@ -101,21 +101,20 @@ Available Commands:
   help               Help about any command
 
 Flags:
-      --client-id string              The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
-      --client-secret string          The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
-      --cloud                         Switches to cloud API endpoints. ($BATON_CLOUD)
-      --deployments strings           Limit syncing to specific deployments by specifying cloud deployment names or IP addresses of on-premise deployments. ($BATON_DEPLOYMENTS)
-  -f, --file string                   The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
-  -h, --help                          help for baton-splunk
-      --log-format string             The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
-      --log-level string              The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
-      --password string               Password of user used to connect to the Splunk API. ($BATON_PASSWORD)
-      --token string                  The Splunk access token used to connect to the Splunk API. ($BATON_TOKEN)
-      --unsafe                        Allow insecure TLS connections to Splunk. ($BATON_UNSAFE)
-      --username string               Username of user used to connect to the Splunk API. ($BATON_USERNAME)
-      --verbose                       Enable listing verbose entitlements for Role capabilities. ($BATON_VERBOSE)
-  -v, --version                       version for baton-splunk
+      --client-id string       The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
+      --client-secret string   The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
+      --cloud                  Switches to cloud API endpoints. ($BATON_CLOUD)
+      --deployments strings    Limit syncing to specific deployments by specifying cloud deployment names or IP addresses of on-premise deployments. ($BATON_DEPLOYMENTS)
+  -f, --file string            The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
+  -h, --help                   help for baton-splunk
+      --log-format string      The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
+      --log-level string       The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
+      --password string        Password of user used to connect to the Splunk API. ($BATON_PASSWORD)
+      --token string           The Splunk access token used to connect to the Splunk API. ($BATON_TOKEN)
+      --unsafe                 Allow insecure TLS connections to Splunk. ($BATON_UNSAFE)
+      --username string        Username of user used to connect to the Splunk API. ($BATON_USERNAME)
+      --verbose                Enable listing verbose entitlements for Role capabilities. ($BATON_VERBOSE)
+  -v, --version                version for baton-splunk
 
 Use "baton-splunk [command] --help" for more information about a command.
-
 ```
