@@ -34,7 +34,7 @@ func roleResource(ctx context.Context, role *splunk.Role, parentResourceID *v2.R
 		return nil, fmt.Errorf("splunk-connector: %w", err)
 	}
 
-	displayName := titleCaser.String(role.Name)
+	displayName := titleCase(role.Name)
 
 	// merge role.capabilities and role.imported_capabilities and join into a string
 	roleCapabilities := append([]string(nil), role.Content.Capabilities...)
