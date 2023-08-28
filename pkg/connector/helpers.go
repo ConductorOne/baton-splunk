@@ -65,3 +65,25 @@ func removeLeadingUrl(url string) (string, error) {
 
 	return "", fmt.Errorf("failed to parse resource id: %s", url)
 }
+
+func removeResource(resources []string, targetResource string) []string {
+	var nr []string
+
+	for _, r := range resources {
+		if r != targetResource {
+			nr = append(nr, r)
+		}
+	}
+
+	return nr
+}
+
+func isResourcePresent(resources []string, targetResource string) bool {
+	for _, r := range resources {
+		if r == targetResource {
+			return true
+		}
+	}
+
+	return false
+}

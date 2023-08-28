@@ -12,6 +12,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/conductorone/baton-splunk/pkg/splunk"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 const roleMember = "member"
@@ -164,6 +166,85 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 	}
 
 	return rv, pageToken, nil, nil
+}
+
+func (r *roleResourceType) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	if principal.Id.ResourceType != resourceTypeUser.Id {
+		l.Warn(
+			"splunk-connector: only users can be granted role membership",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("splunk-connector: only users can be granted role membership")
+	}
+
+	roleId := entitlement.Resource.Id.Resource
+
+	// get existing roles under user
+	user, err := r.client.GetUser(ctx, principal.Id.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to find user: %w", err)
+	}
+
+	// check if role is already granted
+	if isResourcePresent(user.Content.Roles, roleId) {
+		return nil, fmt.Errorf("splunk-connector: role %s already granted to user", roleId)
+	}
+
+	// merge new role into existing roles
+	user.Content.Roles = append(user.Content.Roles, roleId)
+
+	// grant role membership
+	err = r.client.UpdateUserRoles(ctx, principal.Id.Resource, user.Content.Roles)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to grant role membership: %w", err)
+	}
+
+	return nil, nil
+}
+
+func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	entitlement := grant.Entitlement
+	principal := grant.Principal
+
+	if principal.Id.ResourceType != resourceTypeUser.Id {
+		l.Warn(
+			"splunk-connector: only users can have role membership revoked",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("splunk-connector: only users can have role membership revoked")
+	}
+
+	roleId := entitlement.Resource.Id.Resource
+
+	// get existing roles under user
+	user, err := r.client.GetUser(ctx, principal.Id.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to find user: %w", err)
+	}
+
+	// check if role is present in user's roles
+	if !isResourcePresent(user.Content.Roles, roleId) {
+		return nil, fmt.Errorf("splunk-connector: role %s not present in user's roles", roleId)
+	}
+
+	// remove new role from existing roles
+	user.Content.Roles = removeResource(user.Content.Roles, roleId)
+
+	// revoke role membership
+	err = r.client.UpdateUserRoles(ctx, principal.Id.Resource, user.Content.Roles)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to revoke role membership: %w", err)
+	}
+
+	return nil, nil
 }
 
 func roleBuilder(client *splunk.Client) *roleResourceType {

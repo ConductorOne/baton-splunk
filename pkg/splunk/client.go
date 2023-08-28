@@ -7,20 +7,28 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-const Localhost = "localhost"
-const BaseURL = "https://%s:8089/"
-const CloudBaseURL = "https://%s.splunkcloud.com:8089/"
+const (
+	Localhost    = "localhost"
+	BaseURL      = "https://%s:8089"
+	CloudBaseURL = "https://%s.splunkcloud.com:8089"
 
-const UsersBaseURL = "/services/authentication/users"
-const RolesBaseURL = "/services/authorization/roles"
-const CapabilitiesBaseURL = "/services/authorization/grantable_capabilities/capabilities"
-const ApplicationsBaseURL = "/services/apps/local"
-const ApplicationBaseURL = "/services/apps/local/%s"
+	UsersBaseURL        = "/services/authentication/users"
+	UserBaseURL         = "/services/authentication/users/%s"
+	RolesBaseURL        = "/services/authorization/roles"
+	RoleBaseURL         = "/services/authorization/roles/%s"
+	CapabilitiesBaseURL = "/services/authorization/grantable_capabilities/capabilities"
+	ApplicationsBaseURL = "/services/apps/local"
+	ApplicationBaseURL  = "/services/apps/local/%s"
+
+	RolesField        = "roles"
+	CapabilitiesField = "capabilities"
+)
 
 type Client struct {
 	httpClient *http.Client
@@ -81,12 +89,12 @@ func (c *Client) IsCloudPlatform() bool {
 
 // GetUsers returns all users under specific Splunk instance.
 func (c *Client) GetUsers(ctx context.Context, getUsersVars PaginationVars) ([]User, string, error) {
-	var usersResponse Response[User]
+	var userResponse Response[User]
 
-	err := c.doRequest(
+	err := c.get(
 		ctx,
 		c.CreateUrl(UsersBaseURL),
-		&usersResponse,
+		&userResponse,
 		&getUsersVars,
 		"",
 	)
@@ -95,7 +103,26 @@ func (c *Client) GetUsers(ctx context.Context, getUsersVars PaginationVars) ([]U
 		return nil, "", err
 	}
 
-	return handlePagination(&usersResponse)
+	return handlePagination(&userResponse)
+}
+
+// GetUser returns information regarding one specific user under Splunk instance.
+func (c *Client) GetUser(ctx context.Context, userId string) (*User, error) {
+	var usersResponse Response[User]
+
+	err := c.get(
+		ctx,
+		c.CreateUrl(fmt.Sprintf(UserBaseURL, userId)),
+		&usersResponse,
+		nil,
+		"",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &usersResponse.Values[0], nil
 }
 
 // GetUsersByRole returns all users in some specific role under one Splunk instance.
@@ -107,7 +134,7 @@ func (c *Client) GetUsersByRole(ctx context.Context, getUsersVars PaginationVars
 		roleFilter = fmt.Sprintf("roles=\"%s\"", role)
 	}
 
-	err := c.doRequest(
+	err := c.get(
 		ctx,
 		c.CreateUrl(UsersBaseURL),
 		&usersResponse,
@@ -126,7 +153,7 @@ func (c *Client) GetUsersByRole(ctx context.Context, getUsersVars PaginationVars
 func (c *Client) GetRoles(ctx context.Context, getRolesVars PaginationVars) ([]Role, string, error) {
 	var rolesResponse Response[Role]
 
-	err := c.doRequest(
+	err := c.get(
 		ctx,
 		c.CreateUrl(RolesBaseURL),
 		&rolesResponse,
@@ -141,11 +168,30 @@ func (c *Client) GetRoles(ctx context.Context, getRolesVars PaginationVars) ([]R
 	return handlePagination(&rolesResponse)
 }
 
+// GetRole returns information regarding one specific role under Splunk instance.
+func (c *Client) GetRole(ctx context.Context, roleId string) (*Role, error) {
+	var roleResponse Response[Role]
+
+	err := c.get(
+		ctx,
+		c.CreateUrl(fmt.Sprintf(RoleBaseURL, roleId)),
+		&roleResponse,
+		nil,
+		"",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &roleResponse.Values[0], nil
+}
+
 // GetApplications returns all applications under specific Splunk instance.
 func (c *Client) GetApplications(ctx context.Context, getApplicationsVars PaginationVars) ([]Application, string, error) {
 	var applicationsResponse Response[Application]
 
-	err := c.doRequest(
+	err := c.get(
 		ctx,
 		c.CreateUrl(ApplicationsBaseURL),
 		&applicationsResponse,
@@ -164,7 +210,7 @@ func (c *Client) GetApplications(ctx context.Context, getApplicationsVars Pagina
 func (c *Client) GetApplication(ctx context.Context, applicationName string) (*Application, error) {
 	var applicationResponse Response[Application]
 
-	err := c.doRequest(
+	err := c.get(
 		ctx,
 		c.CreateUrl(fmt.Sprintf(ApplicationBaseURL, applicationName)),
 		&applicationResponse,
@@ -183,7 +229,7 @@ func (c *Client) GetApplication(ctx context.Context, applicationName string) (*A
 func (c *Client) GetCapabilities(ctx context.Context, getCapabilitiesVars PaginationVars) ([]Capability, string, error) {
 	var capabilitiesResponse Response[Capability]
 
-	err := c.doRequest(
+	err := c.get(
 		ctx,
 		c.CreateUrl(CapabilitiesBaseURL),
 		&capabilitiesResponse,
@@ -196,6 +242,54 @@ func (c *Client) GetCapabilities(ctx context.Context, getCapabilitiesVars Pagina
 	}
 
 	return handlePagination(&capabilitiesResponse)
+}
+
+// UpdateUserRoles updates roles of a specific user under Splunk instance.
+func (c *Client) UpdateUserRoles(ctx context.Context, userId string, roles []string) error {
+	data := url.Values{}
+
+	data.Set(RolesField, "")
+
+	for _, role := range roles {
+		data.Add(RolesField, role)
+	}
+
+	err := c.post(
+		ctx,
+		c.CreateUrl(fmt.Sprintf(UserBaseURL, userId)),
+		data,
+		"",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateRoleCapabilities updates capabilities of a specific role under Splunk instance.
+func (c *Client) UpdateRoleCapabilities(ctx context.Context, roleId string, capabilities []string) error {
+	data := url.Values{}
+
+	data.Set(CapabilitiesField, "")
+
+	for _, c := range capabilities {
+		data.Add(CapabilitiesField, c)
+	}
+
+	err := c.post(
+		ctx,
+		c.CreateUrl(fmt.Sprintf(RoleBaseURL, roleId)),
+		data,
+		"",
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Handles pagination for Splunk API
@@ -240,14 +334,43 @@ func setupQueryParams(query *url.Values) {
 	query.Set("output_mode", "json")
 }
 
-func (c *Client) doRequest(
+func (c *Client) get(
 	ctx context.Context,
 	urlAddress string,
 	resourceResponse interface{},
 	paginationVars *PaginationVars,
 	filter string,
 ) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlAddress, nil)
+	return c.doRequest(ctx, http.MethodGet, urlAddress, nil, resourceResponse, paginationVars, filter)
+}
+
+func (c *Client) post(
+	ctx context.Context,
+	urlAddress string,
+	data url.Values,
+	filter string,
+) error {
+	return c.doRequest(ctx, http.MethodPost, urlAddress, data, nil, nil, filter)
+}
+
+func (c *Client) doRequest(
+	ctx context.Context,
+	method string,
+	urlAddress string,
+	data url.Values,
+	resourceResponse interface{},
+	paginationVars *PaginationVars,
+	filter string,
+) error {
+	var body strings.Reader
+
+	if data != nil {
+		encodedData := data.Encode()
+		bodyReader := strings.NewReader(encodedData)
+		body = *bodyReader
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, urlAddress, &body)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/conductorone/baton-splunk/pkg/splunk"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 type deploymentResourceType struct {
@@ -162,6 +164,85 @@ func (d *deploymentResourceType) Grants(ctx context.Context, resource *v2.Resour
 	}
 
 	return rv, pageToken, nil, nil
+}
+
+func (d *deploymentResourceType) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	if principal.Id.ResourceType != resourceTypeRole.Id {
+		l.Warn(
+			"splunk-connector: only roles can be granted capability membership",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("splunk-connector: only roles can be granted capability membership")
+	}
+
+	targetCapabilityId := entitlement.Slug
+
+	// get existing capabilities under role
+	role, err := d.client.GetRole(ctx, principal.Id.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to find role: %w", err)
+	}
+
+	// check if capability is already granted
+	if isResourcePresent(role.Content.Capabilities, targetCapabilityId) {
+		return nil, fmt.Errorf("splunk-connector: capability %s already granted to role", targetCapabilityId)
+	}
+
+	// merge new capability into existing capabilities
+	role.Content.Capabilities = append(role.Content.Capabilities, targetCapabilityId)
+
+	// grant capability membership
+	err = d.client.UpdateRoleCapabilities(ctx, principal.Id.Resource, role.Content.Capabilities)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to grant capability membership: %w", err)
+	}
+
+	return nil, nil
+}
+
+func (d *deploymentResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	entitlement := grant.Entitlement
+	principal := grant.Principal
+
+	if principal.Id.ResourceType != resourceTypeRole.Id {
+		l.Warn(
+			"splunk-connector: only roles can have capability membership revoked",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("splunk-connector: only roles can have capability membership revoked")
+	}
+
+	targetCapabilityId := entitlement.Slug
+
+	// get existing capabilities under role
+	role, err := d.client.GetRole(ctx, principal.Id.Resource)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to find role: %w", err)
+	}
+
+	// check if capability is present in role's capabilities
+	if !isResourcePresent(role.Content.Capabilities, targetCapabilityId) {
+		return nil, fmt.Errorf("splunk-connector: capability %s not present in role's capabilities", targetCapabilityId)
+	}
+
+	// remove new capability from existing capabilities
+	role.Content.Capabilities = removeResource(role.Content.Capabilities, targetCapabilityId)
+
+	// revoke capability membership
+	err = d.client.UpdateRoleCapabilities(ctx, principal.Id.Resource, role.Content.Capabilities)
+	if err != nil {
+		return nil, fmt.Errorf("splunk-connector: failed to revoke capability membership: %w", err)
+	}
+
+	return nil, nil
 }
 
 func deploymentBuilder(client *splunk.Client, verbose bool, deployments []string) *deploymentResourceType {
