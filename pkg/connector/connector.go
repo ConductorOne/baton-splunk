@@ -120,7 +120,7 @@ func New(ctx context.Context, auth string, config CLIConfig, deployments []strin
 		options = append(
 			options,
 			uhttp.WithTLSClientConfig(
-				&tls.Config{InsecureSkipVerify: true},
+				&tls.Config{InsecureSkipVerify: true}, // #nosec G402
 			),
 		)
 	}
