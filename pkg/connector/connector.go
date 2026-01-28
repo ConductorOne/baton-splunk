@@ -56,7 +56,7 @@ func (sp *Splunk) ResourceSyncers(ctx context.Context) []connectorbuilder.Resour
 	}
 
 	// Applications are only supported for on-premise Splunk deployments.
-	if !sp.client.Cloud {
+	if sp.client != nil && !sp.client.Cloud {
 		builders = append(builders, applicationBuilder(sp.client, sp.verbose))
 	}
 
