@@ -35,6 +35,7 @@ type Client struct {
 	Auth       string
 	Cloud      bool
 	Deployment string
+	BaseURL    string
 }
 
 type PaginationData struct {
@@ -53,12 +54,13 @@ type Response[T any] struct {
 	PaginationData `json:"paging"`
 }
 
-func NewClient(httpClient *http.Client, auth string, cloud bool) *Client {
+func NewClient(httpClient *http.Client, auth string, cloud bool, baseURL string) *Client {
 	return &Client{
 		httpClient: httpClient,
 		Auth:       auth,
 		Cloud:      cloud,
 		Deployment: Localhost,
+		BaseURL:    baseURL,
 	}
 }
 
@@ -76,11 +78,13 @@ func (c *Client) ResetPointer() {
 
 // GetUrl returns the full URL for the given endpoint based on platform.
 func (c *Client) CreateUrl(endpoint string) string {
+	if c.BaseURL != "" {
+		return strings.TrimSuffix(c.BaseURL, "/") + endpoint
+	}
 	if c.Cloud {
 		return fmt.Sprintf(CloudBaseURL, c.Deployment) + endpoint
-	} else {
-		return fmt.Sprintf(BaseURL, c.Deployment) + endpoint
 	}
+	return fmt.Sprintf(BaseURL, c.Deployment) + endpoint
 }
 
 func (c *Client) IsCloudPlatform() bool {
