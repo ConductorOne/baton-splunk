@@ -1,6 +1,6 @@
 ![Baton Logo](./docs/images/baton-logo.png)
 
-# `baton-splunk` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-splunk.svg)](https://pkg.go.dev/github.com/conductorone/baton-splunk) ![main ci](https://github.com/conductorone/baton-splunk/actions/workflows/main.yaml/badge.svg)
+# `baton-splunk` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-splunk.svg)](https://pkg.go.dev/github.com/conductorone/baton-splunk) ![verify](https://github.com/conductorone/baton-splunk/actions/workflows/verify.yaml/badge.svg)
 
 `baton-splunk` is a connector for Splunk built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the Splunk API to sync data about applications, users, roles and their capabilities.
 
@@ -8,13 +8,12 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more about the
 
 # Prerequisites
 
-Gaining access to the Splunk API varies based on platform, Enterprise or Cloud. 
+Gaining access to the Splunk API varies based on platform, Enterprise or Cloud.
 
 ## Splunk API Access
 ### Splunk Cloud
 
-In case of Splunk Cloud, you need to create a new instance and allow list ip addresses of machines where this connector will be running or submit a support case. For more information, see [here](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2303/RESTTUT/RESTandCloud). 
-
+In case of Splunk Cloud, you need to create a new instance and allow list ip addresses of machines where this connector will be running or submit a support case. For more information, see [here](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2303/RESTTUT/RESTandCloud).
 
 ### Splunk Enterprise
 
@@ -46,7 +45,7 @@ baton resources
 ## docker
 
 ### Limitations
-Splunk docker image supports only `x86_64` CPU architecture. 
+Splunk docker image supports only `x86_64` CPU architecture.
 
 ### With Splunk image
 ```
