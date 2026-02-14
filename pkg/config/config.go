@@ -44,6 +44,7 @@ var (
 	BaseURL = field.StringField(
 		"base-url",
 		field.WithDescription("Override the Splunk API URL (for testing)"),
+		field.WithHidden(true),
 	)
 )
 
