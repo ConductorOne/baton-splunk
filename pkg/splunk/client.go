@@ -393,7 +393,7 @@ func (c *Client) doRequest(
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("Authorization", c.Auth)
 
-	rawResponse, err := c.httpClient.Do(req)
+	rawResponse, err := c.httpClient.Do(req) //nolint:gosec,nolintlint // G704: URL constructed from trusted config
 	if err != nil {
 		return err
 	}
