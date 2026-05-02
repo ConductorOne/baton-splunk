@@ -67,6 +67,7 @@ func getConnector(ctx context.Context, c *cfg.Splunk) (types.ConnectorServer, er
 			Unsafe:  c.Unsafe,
 			Verbose: c.Verbose,
 			Cloud:   c.Cloud,
+			BaseURL: c.BaseUrl,
 		},
 		c.Deployments,
 	)

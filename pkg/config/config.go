@@ -41,6 +41,12 @@ var (
 		"deployments",
 		field.WithDescription("Limit syncing to specific deployments by specifying cloud deployment names or IP addresses of on-premise deployments."),
 	)
+	BaseURL = field.StringField(
+		"base-url",
+		field.WithDescription("Override the Splunk API URL (for testing)"),
+		field.WithHidden(true),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
+	)
 )
 
 //go:generate go run ./gen
@@ -52,4 +58,5 @@ var Config = field.NewConfiguration([]field.SchemaField{
 	Verbose,
 	Cloud,
 	Deployments,
+	BaseURL,
 })

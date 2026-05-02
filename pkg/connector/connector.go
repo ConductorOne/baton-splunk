@@ -107,6 +107,7 @@ type CLIConfig struct {
 	Unsafe  bool
 	Verbose bool
 	Cloud   bool
+	BaseURL string
 }
 
 // New returns the Splunk connector.
@@ -134,7 +135,7 @@ func New(ctx context.Context, auth string, config CLIConfig, deployments []strin
 	}
 
 	return &Splunk{
-		client:      splunk.NewClient(httpClient, auth, config.Cloud),
+		client:      splunk.NewClient(httpClient, auth, config.Cloud, config.BaseURL),
 		verbose:     config.Verbose,
 		cloud:       config.Cloud,
 		deployments: deployments,

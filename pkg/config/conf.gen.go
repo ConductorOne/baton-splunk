@@ -11,6 +11,7 @@ type Splunk struct {
 	Verbose bool `mapstructure:"verbose"`
 	Cloud bool `mapstructure:"cloud"`
 	Deployments []string `mapstructure:"deployments"`
+	BaseUrl string `mapstructure:"base-url"`
 }
 
 func (c *Splunk) findFieldByTag(tagValue string) (any, bool) {
