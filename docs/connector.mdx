@@ -176,7 +176,7 @@ spec:
     spec:
       containers:
       - name: baton-splunk
-        image: ghcr.io/conductorone/baton-splunk:latest
+        image: public.ecr.aws/conductorone/baton-splunk:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: BATON_HOST_ID
@@ -200,10 +200,3 @@ Check that the connector data uploaded correctly. In C1, click **Apps**. On the 
 **Done.** Your Splunk connector is now pulling access data into C1.
 </Tab>
 </Tabs>
-
-
-
-
-
-
-
