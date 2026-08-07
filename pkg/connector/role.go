@@ -51,7 +51,8 @@ func roleResource(ctx context.Context, role *splunk.Role, parentResourceID *v2.R
 		displayName,
 		resourceTypeRole,
 		roleID,
-		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
+		[]rs.GroupTraitOption{},
+		rs.WithResourceProfile(profile),
 		rs.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
@@ -122,12 +123,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pt
 		return nil, "", nil, err
 	}
 
-	roleTrait, err := rs.GetGroupTrait(resource)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	roleName, ok := rs.GetProfileStringValue(roleTrait.Profile, "role_name")
+	roleName, ok := rs.GetProfileStringValue(rs.GetProfile(resource), "role_name")
 	if !ok {
 		return nil, "", nil, fmt.Errorf("splunk-connector: error parsing role name from role profile")
 	}
