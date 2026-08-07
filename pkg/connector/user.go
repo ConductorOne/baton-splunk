@@ -39,9 +39,9 @@ func userResource(ctx context.Context, user *splunk.User, parentResourceID *v2.R
 		userID,
 		[]resource.UserTraitOption{
 			resource.WithEmail(user.Content.Email, true),
-			resource.WithUserProfile(profile),
-			resource.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
 		},
+		resource.WithResourceProfile(profile),
+		resource.WithResourceStatus(v2.Status_RESOURCE_STATUS_ENABLED, ""),
 		resource.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
