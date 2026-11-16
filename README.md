@@ -1,4 +1,4 @@
-![Baton Logo](./docs/images/baton-logo.png)
+![Baton Logo](./baton-logo.png)
 
 # `baton-splunk` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-splunk.svg)](https://pkg.go.dev/github.com/conductorone/baton-splunk) ![verify](https://github.com/conductorone/baton-splunk/actions/workflows/verify.yaml/badge.svg)
 
